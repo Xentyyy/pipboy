@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PIP-BOY HAVA DURUMU</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Share Tech Mono', monospace;
+            background: #000;
+            color: #0f0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 1;
+            transition: opacity 0.5s;
+        }
+
+        .loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-vault-boy {
+            width: 200px;
+            height: 200px;
+            margin-bottom: 30px;
+            filter: drop-shadow(0 0 30px #0f0);
+            animation: vaultBoyPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes vaultBoyPulse {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 30px #0f0); }
+            50% { transform: scale(1.05); filter: drop-shadow(0 0 50px #0f0); }
+        }
+
+        .loading-text {
+            font-size: 18px;
+            text-align: center;
+            line-height: 2;
+            text-shadow: 0 0 10px #0f0;
+            min-height: 200px;
+        }
+
+        .loading-text::after {
+            content: '▌';
+            animation: blink 0.7s infinite;
+        }
+
+        .pipboy-container {
+            width: 90vw;
+            max-width: 1200px;
+            height: 85vh;
+            background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+            border: 8px solid #2a5a3a;
+            border-radius: 20px;
+            box-shadow: 
+                0 0 50px rgba(0, 255, 0, 0.3),
+                inset 0 0 100px rgba(0, 255, 0, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .scanline {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 0, 0.03) 0px,
+                transparent 1px,
+                transparent 2px,
+                rgba(0, 255, 0, 0.03) 3px
+            );
+            pointer-events: none;
+            animation: flicker 0.15s infinite;
+            z-index: 100;
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.95; }
+            50% { opacity: 1; }
+            100% { opacity: 0.95; }
+        }
+
+        .screen-glow {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, rgba(0, 255, 0, 0.1) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 99;
+        }
+
+        .screen-transition {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 255, 0, 0.3);
+            pointer-events: none;
+            z-index: 98;
+            opacity: 0;
+        }
+
+        .screen-transition.active {
+            animation: screenWave 0.5s ease-out;
+        }
+
+        @keyframes screenWave {
+            0% { opacity: 0; transform: scaleY(1); }
+            25% { opacity: 0.6; transform: scaleY(0.98) scaleX(1.02); }
+            50% { opacity: 0.4; transform: scaleY(1.02) scaleX(0.98); }
+            75% { opacity: 0.2; transform: scaleY(0.99) scaleX(1.01); }
+            100% { opacity: 0; transform: scaleY(1) scaleX(1); }
+        }
+
+        .header {
+            background: rgba(0, 100, 0, 0.3);
+            padding: 15px 30px;
+            border-bottom: 2px solid #0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            text-shadow: 0 0 10px #0f0;
+            letter-spacing: 3px;
+        }
+
+        .status-bar {
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+        }
+
+        .main-content {
+            display: flex;
+            height: calc(100% - 150px);
+        }
+
+        .sidebar {
+            width: 250px;
+            background: rgba(0, 50, 0, 0.3);
+            border-right: 2px solid #0f0;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .menu-item {
+            padding: 15px 20px;
+            margin: 10px 0;
+            background: rgba(0, 100, 0, 0.2);
+            border: 1px solid #0f0;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .menu-item:hover,
+        .menu-item.active {
+            background: rgba(0, 255, 0, 0.3);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+            transform: translateX(5px);
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .content-section {
+            display: none;
+        }
+
+        .content-section.active {
+            display: block;
+            animation: fadeInContent 0.5s ease-out;
+        }
+
+        @keyframes fadeInContent {
+            0% { 
+                opacity: 0; 
+                transform: translateX(-20px);
+                filter: blur(5px);
+            }
+            100% { 
+                opacity: 1; 
+                transform: translateX(0);
+                filter: blur(0);
+            }
+        }
+
+        .data-panel {
+            background: rgba(0, 100, 0, 0.1);
+            border: 2px solid #0f0;
+            padding: 20px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .data-panel::before {
+            content: '>';
+            position: absolute;
+            left: 5px;
+            top: 5px;
+            font-size: 20px;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0; }
+        }
+
+        .data-panel h2 {
+            color: #0f0;
+            margin-bottom: 15px;
+            font-size: 20px;
+            text-shadow: 0 0 10px #0f0;
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(0, 255, 0, 0.2);
+        }
+
+        .typewriter {
+            overflow: hidden;
+            white-space: pre-wrap;
+            letter-spacing: 0.1em;
+            line-height: 1.8;
+        }
+
+        .typewriter::after {
+            content: '▌';
+            animation: blink 0.7s infinite;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: rgba(0, 100, 0, 0.3);
+            padding: 15px 30px;
+            border-top: 2px solid #0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .pip-button {
+            padding: 8px 20px;
+            background: rgba(0, 100, 0, 0.3);
+            border: 2px solid #0f0;
+            color: #0f0;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .pip-button:hover {
+            background: rgba(0, 255, 0, 0.4);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.6);
+        }
+
+        .pip-button:active {
+            transform: scale(0.95);
+        }
+
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #0f0;
+        }
+
+        .weather-main {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .vault-boy-container {
+            background: rgba(0, 100, 0, 0.1);
+            border: 2px solid #0f0;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            min-height: 400px;
+        }
+
+        .weather-effect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .vault-boy {
+            font-size: 150px;
+            margin: 20px 0;
+            filter: drop-shadow(0 0 20px #0f0);
+            position: relative;
+            z-index: 2;
+        }
+
+        .rain {
+            position: absolute;
+            width: 2px;
+            height: 20px;
+            background: linear-gradient(to bottom, transparent, #0f0);
+            animation: fall linear infinite;
+        }
+
+        @keyframes fall {
+            to {
+                transform: translateY(100vh);
+            }
+        }
+
+        .snow {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #0f0;
+            border-radius: 50%;
+            animation: snowfall linear infinite;
+        }
+
+        @keyframes snowfall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+            }
+        }
+
+        .sun-rays {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, rgba(0, 255, 0, 0.3), transparent);
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.6; }
+        }
+
+        .cloud {
+            position: absolute;
+            background: #0f0;
+            opacity: 0.2;
+            border-radius: 100px;
+            animation: float 20s linear infinite;
+        }
+
+        @keyframes float {
+            from { left: -100px; }
+            to { left: 100%; }
+        }
+
+        .current-weather {
+            background: rgba(0, 100, 0, 0.1);
+            border: 2px solid #0f0;
+            padding: 30px;
+        }
+
+        .temp-display {
+            font-size: 72px;
+            text-align: center;
+            margin: 20px 0;
+            text-shadow: 0 0 20px #0f0;
+        }
+
+        .weather-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .detail-item {
+            background: rgba(0, 100, 0, 0.1);
+            border: 1px solid #0f0;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .detail-item .label {
+            font-size: 12px;
+            opacity: 0.7;
+            margin-bottom: 5px;
+        }
+
+        .detail-item .value {
+            font-size: 24px;
+            text-shadow: 0 0 10px #0f0;
+        }
+
+        .forecast-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .forecast-item {
+            background: rgba(0, 100, 0, 0.1);
+            border: 2px solid #0f0;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .forecast-item:hover {
+            background: rgba(0, 255, 0, 0.2);
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.4);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid #0f0;
+            color: #0f0;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 16px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .search-input:focus {
+            outline: none;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+        }
+
+        .error {
+            background: rgba(255, 0, 0, 0.1);
+            border: 2px solid #f00;
+            color: #f00;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .radar-container {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            background: rgba(0, 100, 0, 0.05);
+            border: 2px solid #0f0;
+            margin-top: 15px;
+            overflow: hidden;
+        }
+
+        .radar-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            filter: hue-rotate(90deg) saturate(1.5) brightness(0.9);
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loading-screen">
+        <img src="data:image/png;base64,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" class="loading-vault-boy" alt="Vault Boy">
+        <div class="loading-text" id="loading-text"></div>
+    </div>
+
+    <div class="pipboy-container">
+        <div class="scanline"></div>
+        <div class="screen-glow"></div>
+        <div class="screen-transition" id="screen-transition"></div>
+        
+        <div class="header">
+            <h1>PIP-BOY HAVA DURUMU</h1>
+            <div class="status-bar">
+                <div>SAAT: <span id="current-time">--:--</span></div>
+                <div>KONUM: <span id="location-name">--</span></div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <nav class="sidebar">
+                <div class="menu-item active" data-section="current">GÜNCEL</div>
+                <div class="menu-item" data-section="forecast">TAHMİN</div>
+                <div class="menu-item" data-section="radar">RADAR</div>
+                <div class="menu-item" data-section="details">DETAYLAR</div>
+                <div class="menu-item" data-section="search">ARA</div>
+            </nav>
+
+            <div class="content-area">
+                <div class="content-section active" id="current">
+                    <div class="weather-main">
+                        <div class="vault-boy-container">
+                            <div id="weather-effect" class="weather-effect"></div>
+                            <div id="vault-boy" class="vault-boy">👤</div>
+                            <div id="weather-desc" style="font-size: 20px; margin-top: 20px; position: relative; z-index: 2;">YÜKLENIYOR...</div>
+                        </div>
+
+                        <div class="current-weather">
+                            <h2 style="text-align: center; margin-bottom: 20px;">SICAKLIK</h2>
+                            <div class="temp-display" id="temp-display">--°C</div>
+                            <div class="data-row">
+                                <span>Hissedilen:</span>
+                                <span id="feels-like">--°C</span>
+                            </div>
+                            <div class="data-row">
+                                <span>Min / Max:</span>
+                                <span id="min-max">--°C / --°C</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="weather-details">
+                        <div class="detail-item">
+                            <div class="label">NEM</div>
+                            <div class="value" id="humidity">--%</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="label">RÜZGAR</div>
+                            <div class="value" id="wind">--</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="label">BASINÇ</div>
+                            <div class="value" id="pressure">--</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="label">GÖRÜŞ</div>
+                            <div class="value" id="visibility">--</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content-section" id="forecast">
+                    <div class="data-panel">
+                        <h2>7 GÜNLÜK TAHMİN</h2>
+                        <div id="forecast-container" class="forecast-grid"></div>
+                    </div>
+                </div>
+
+                <div class="content-section" id="radar">
+                    <div class="data-panel">
+                        <h2>SİSTEM DURUMU</h2>
+                        <div class="typewriter" id="radar-status"></div>
+                    </div>
+
+                    <div class="data-panel">
+                        <h2>TÜRKİYE RADAR HARİTASI</h2>
+                        <div class="radar-container">
+                            <iframe 
+                                id="radar-frame"
+                                src="https://embed.windy.com/embed2.html?lat=39.000&lon=35.000&detailLat=39.000&detailLon=35.000&width=650&height=450&zoom=6&level=surface&overlay=rain&product=ecmwf&menu=&message=&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=default&metricTemp=default&radarRange=-1" 
+                                allowfullscreen>
+                            </iframe>
+                        </div>
+                        <div style="margin-top: 15px; text-align: center; font-size: 14px; opacity: 0.8;">
+                            <p>CANLI RADAR GÖRÜNTÜLERİ - TÜRKİYE</p>
+                            <p style="margin-top: 5px;">Yağış yoğunluğu, bulutlar ve meteorolojik veriler</p>
+                        </div>
+                    </div>
+
+                    <div class="data-panel">
+                        <h2>RADAR KATMANLARI</h2>
+                        <div style="display: grid; gap: 10px;">
+                            <button class="pip-button" onclick="changeRadarLayer('rain')">YAĞIŞ KATMANI</button>
+                            <button class="pip-button" onclick="changeRadarLayer('clouds')">BULUT KATMANI</button>
+                            <button class="pip-button" onclick="changeRadarLayer('wind')">RÜZGAR KATMANI</button>
+                            <button class="pip-button" onclick="changeRadarLayer('temp')">SICAKLIK KATMANI</button>
+                        </div>
+                    </div>
+
+                    <div class="data-panel">
+                        <h2>RADAR BİLGİLERİ</h2>
+                        <div class="typewriter" id="radar-info"></div>
+                    </div>
+                </div>
+
+                <div class="content-section" id="details">
+                    <div class="data-panel">
+                        <h2>DETAYLI BİLGİLER</h2>
+                        <div class="data-row"><span>Gün Doğumu:</span><span id="sunrise">--:--</span></div>
+                        <div class="data-row"><span>Gün Batımı:</span><span id="sunset">--:--</span></div>
+                        <div class="data-row"><span>UV İndeksi:</span><span id="uv-index">--</span></div>
+                        <div class="data-row"><span>Bulutluluk:</span><span id="clouds">--%</span></div>
+                        <div class="data-row"><span>Rüzgar Yönü:</span><span id="wind-dir">--</span></div>
+                    </div>
+                </div>
+
+                <div class="content-section" id="search">
+                    <div class="data-panel">
+                        <h2>ŞEHİR ARA</h2>
+                        <input type="text" id="city-search" class="search-input" placeholder="ŞEHİR ADI GİRİN..." />
+                        <button class="pip-button" style="width: 100%;" onclick="searchCity()">ARA</button>
+                        <div id="search-error"></div>
+                    </div>
+
+                    <div class="data-panel">
+                        <h2>POPÜLER ŞEHİRLER</h2>
+                        <div style="display: grid; gap: 10px;">
+                            <button class="pip-button" onclick="loadCity('Istanbul')">İSTANBUL</button>
+                            <button class="pip-button" onclick="loadCity('Ankara')">ANKARA</button>
+                            <button class="pip-button" onclick="loadCity('Izmir')">İZMİR</button>
+                            <button class="pip-button" onclick="loadCity('Antalya')">ANTALYA</button>
+                            <button class="pip-button" onclick="loadCity('London')">LONDON</button>
+                            <button class="pip-button" onclick="loadCity('New York')">NEW YORK</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div id="timestamp">--</div>
+            <div style="display: flex; gap: 10px;">
+                <button class="pip-button" onclick="getCurrentLocation()">KONUMUM</button>
+                <button class="pip-button" onclick="refreshWeather()">YENİLE</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const apiKey = 'c97a6ce1476f468d942160643253107';
+        let currentCity = 'Istanbul';
+        let typingInProgress = false;
+        let currentSection = 'current';
+
+        // Check if first visit
+        const hasVisited = sessionStorage.getItem('hasVisited');
+
+        // Audio Context
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playClickSound() {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800;
+            oscillator.type = 'square';
+            
+            gainNode.gain.setValueAtTime(0.03, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+
+        function playSelectSound() {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(600, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(1200, audioContext.currentTime + 0.15);
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.05, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.15);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.15);
+        }
+
+        function playTabSwitchSound() {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.2);
+            oscillator.type = 'triangle';
+            
+            gainNode.gain.setValueAtTime(0.04, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.2);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.2);
+        }
+
+        function playTypingSound() {
+            if (!typingInProgress) return;
+            
+            const oscillator1 = audioContext.createOscillator();
+            const oscillator2 = audioContext.createOscillator();
+            const oscillator3 = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            const filter = audioContext.createBiquadFilter();
+            
+            oscillator1.connect(filter);
+            oscillator2.connect(filter);
+            oscillator3.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator1.frequency.value = 400 + Math.random() * 100;
+            oscillator2.frequency.value = 800 + Math.random() * 150;
+            oscillator3.frequency.value = 1600 + Math.random() * 200;
+            
+            oscillator1.type = 'triangle';
+            oscillator2.type = 'square';
+            oscillator3.type = 'sine';
+            
+            filter.type = 'bandpass';
+            filter.frequency.value = 1200;
+            filter.Q.value = 1.5;
+            
+            gainNode.gain.setValueAtTime(0.025, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.04);
+            
+            oscillator1.start(audioContext.currentTime);
+            oscillator2.start(audioContext.currentTime);
+            oscillator3.start(audioContext.currentTime);
+            oscillator1.stop(audioContext.currentTime + 0.04);
+            oscillator2.stop(audioContext.currentTime + 0.04);
+            oscillator3.stop(audioContext.currentTime + 0.04);
+        }
+
+        function triggerScreenTransition() {
+            const transition = document.getElementById('screen-transition');
+            transition.classList.remove('active');
+            void transition.offsetWidth;
+            transition.classList.add('active');
+        }
+
+        // Typewriter effect - only for radar section
+        function typeWriter(element, text, speed = 35, playSound = false) {
+            let i = 0;
+            element.textContent = '';
+            typingInProgress = playSound && (currentSection === 'radar');
+            
+            function type() {
+                if (i < text.length) {
+                    const char = text.charAt(i);
+                    element.textContent += char;
+                    
+                    if (typingInProgress && char.trim() !== '') {
+                        playTypingSound();
+                    }
+                    
+                    i++;
+                    
+                    let nextDelay = speed;
+                    if (char === ' ') {
+                        nextDelay = speed * 0.3;
+                    } else if (char === '.' || char === ',' || char === ':') {
+                        nextDelay = speed * 2;
+                    } else if (char === '\n') {
+                        nextDelay = speed * 3;
+                    }
+                    
+                    setTimeout(type, nextDelay + Math.random() * 10);
+                } else {
+                    typingInProgress = false;
+                }
+            }
+            type();
+        }
+
+        // Loading screen
+        if (!hasVisited) {
+            const loadingText = `> VAULT-TEC PIP-BOY 3000 Mk IV
+> SİSTEM BAŞLATILIYOR...
+> Donanım kontrolü: BAŞARILI
+> Yazılım sürümü: v3.14.159
+> Hava durumu modülü yükleniyor...
+> Veri tabanı senkronizasyonu...
+> Radar sistemi kalibre ediliyor...
+> Bağlantı kuruluyor...
+> SİSTEM HAZIR`;
+
+            typingInProgress = true;
+            typeWriter(document.getElementById('loading-text'), loadingText, 25, true);
+
+            setTimeout(() => {
+                typingInProgress = false;
+                document.getElementById('loading-screen').classList.add('hidden');
+                sessionStorage.setItem('hasVisited', 'true');
+                fetchWeather(currentCity);
+            }, loadingText.length * 30);
+        } else {
+            document.getElementById('loading-screen').style.display = 'none';
+            fetchWeather(currentCity);
+        }
+
+        // Menu
+        document.querySelectorAll('.menu-item').forEach(item => {
+            item.addEventListener('click', () => {
+                playTabSwitchSound();
+                triggerScreenTransition();
+                
+                currentSection = item.dataset.section;
+                
+                document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+                item.classList.add('active');
+                document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+                document.getElementById(item.dataset.section).classList.add('active');
+
+                if (item.dataset.section === 'radar') {
+                    setTimeout(() => {
+                        const statusText = `> VAULT-TEC RADAR SİSTEMİ v3.14
+> Sistem durumu: AKTİF
+> Kapsama alanı: TÜRKİYE
+> Güncelleme sıklığı: CANLI
+> Son güncelleme: ${new Date().toLocaleString('tr-TR')}
+> Radar hassasiyeti: YÜKSEK
+> Meteorolojik veri akışı: NORMAL
+> Bağlantı durumu: GÜVENLİ`;
+                        
+                        typeWriter(document.getElementById('radar-status'), statusText, 20, true);
+                        
+                        setTimeout(() => {
+                            const infoText = `> RADAR BİLGİLERİ:
+  - Yağış tespit sistemi çevrimiçi
+  - Bulut takip modülü aktif
+  - Rüzgar analiz sistemi çalışıyor
+  - Sıcaklık haritası güncelleniyor
+  - Gerçek zamanlı veri akışı sağlanıyor
+  
+> UYARI: Radar görüntüleri otomatik güncellenir.
+
+> TÜRKİYE BÖLGESİ:
+  Merkez: 39°N, 35°E
+  Kapsama: Tüm Türkiye
+  
+> Sistem hazır. Komutlar için butonları kullanın.`;
+                            
+                            typeWriter(document.getElementById('radar-info'), infoText, 15, true);
+                        }, statusText.length * 25);
+                    }, 300);
+                }
+            });
+
+            item.addEventListener('mouseenter', () => {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 1000;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.02, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.05);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.05);
+            });
+        });
+
+        document.querySelectorAll('.pip-button').forEach(button => {
+            button.addEventListener('click', () => {
+                playClickSound();
+            });
+        });
+
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('timestamp').textContent = now.toLocaleString('tr-TR');
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        function getVaultBoyAndEffect(condition, isDay) {
+            const effectDiv = document.getElementById('weather-effect');
+            effectDiv.innerHTML = '';
+            const c = condition.toLowerCase();
+
+            if (c.includes('rain') || c.includes('yağmur') || c.includes('drizzle')) {
+                for (let i = 0; i < 50; i++) {
+                    const rain = document.createElement('div');
+                    rain.className = 'rain';
+                    rain.style.left = Math.random() * 100 + '%';
+                    rain.style.animationDuration = (Math.random() * 0.5 + 0.5) + 's';
+                    rain.style.animationDelay = Math.random() * 2 + 's';
+                    effectDiv.appendChild(rain);
+                }
+                return '☔';
+            }
+
+            if (c.includes('snow') || c.includes('kar')) {
+                for (let i = 0; i < 30; i++) {
+                    const snow = document.createElement('div');
+                    snow.className = 'snow';
+                    snow.style.left = Math.random() * 100 + '%';
+                    snow.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                    snow.style.animationDelay = Math.random() * 5 + 's';
+                    effectDiv.appendChild(snow);
+                }
+                return '⛷️';
+            }
+
+            if ((c.includes('clear') || c.includes('sunny') || c.includes('açık') || c.includes('güneşli')) && isDay) {
+                const sun = document.createElement('div');
+                sun.className = 'sun-rays';
+                effectDiv.appendChild(sun);
+                return '😎';
+            }
+
+            if ((c.includes('clear') || c.includes('açık')) && !isDay) {
+                return '🌙';
+            }
+
+            if (c.includes('cloud') || c.includes('bulut') || c.includes('kapalı') || c.includes('parçalı')) {
+                for (let i = 0; i < 5; i++) {
+                    const cloud = document.createElement('div');
+                    cloud.className = 'cloud';
+                    cloud.style.width = (Math.random() * 100 + 50) + 'px';
+                    cloud.style.height = (Math.random() * 40 + 30) + 'px';
+                    cloud.style.top = Math.random() * 80 + '%';
+                    cloud.style.animationDuration = (Math.random() * 20 + 15) + 's';
+                    cloud.style.animationDelay = Math.random() * 10 + 's';
+                    effectDiv.appendChild(cloud);
+                }
+                return '☁️';
+            }
+
+            if (c.includes('thunder') || c.includes('storm') || c.includes('fırtına') || c.includes('gök gürültülü')) {
+                return '⚡';
+            }
+
+            if (c.includes('mist') || c.includes('fog') || c.includes('sis')) {
+                return '🌫️';
+            }
+
+            return '🤷';
+        }
+
+        function changeRadarLayer(layer) {
+            const iframe = document.getElementById('radar-frame');
+            const baseUrl = 'https://embed.windy.com/embed2.html?lat=39.000&lon=35.000&detailLat=39.000&detailLon=35.000&width=650&height=450&zoom=6&level=surface';
+            
+            const layers = {
+                'rain': '&overlay=rain&product=ecmwf',
+                'clouds': '&overlay=clouds&product=ecmwf',
+                'wind': '&overlay=wind&product=ecmwf',
+                'temp': '&overlay=temp&product=ecmwf'
+            };
+            
+            iframe.src = baseUrl + layers[layer] + '&menu=&message=&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=default&metricTemp=default&radarRange=-1';
+            
+            const layerNames = {
+                'rain': 'YAĞIŞ',
+                'clouds': 'BULUT',
+                'wind': 'RÜZGAR',
+                'temp': 'SICAKLIK'
+            };
+            
+            const infoText = `> ${layerNames[layer]} KATMANI AKTİF
+> Harita güncelleniyor...
+> Veri yükleniyor...
+> Görüntüleme modu: ${layerNames[layer]}
+> Güncelleme başarılı.`;
+            
+            typeWriter(document.getElementById('radar-info'), infoText, 25, true);
+        }
+
+        async function fetchWeather(city) {
+            try {
+                const res = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${city}&days=7&aqi=yes&lang=tr`);
+                if (!res.ok) throw new Error('Şehir bulunamadı');
+                const data = await res.json();
+                updateUI(data);
+                document.getElementById('search-error').innerHTML = '';
+                playSelectSound();
+            } catch (err) {
+                document.getElementById('search-error').innerHTML = `<div class="error">HATA: ${err.message}</div>`;
+            }
+        }
+
+        function updateUI(data) {
+            const c = data.current;
+            const l = data.location;
+            const f = data.forecast.forecastday;
+
+            document.getElementById('location-name').textContent = l.name;
+            document.getElementById('temp-display').textContent = Math.round(c.temp_c) + '°C';
+            document.getElementById('feels-like').textContent = Math.round(c.feelslike_c) + '°C';
+            document.getElementById('min-max').textContent = `${Math.round(f[0].day.mintemp_c)}°C / ${Math.round(f[0].day.maxtemp_c)}°C`;
+            document.getElementById('humidity').textContent = c.humidity + '%';
+            document.getElementById('wind').textContent = Math.round(c.wind_kph) + ' km/h';
+            document.getElementById('pressure').textContent = Math.round(c.pressure_mb) + ' mb';
+            document.getElementById('visibility').textContent = c.vis_km + ' km';
+
+            const vaultBoy = getVaultBoyAndEffect(c.condition.text, c.is_day === 1);
+            document.getElementById('vault-boy').textContent = vaultBoy;
+            document.getElementById('weather-desc').textContent = c.condition.text.toUpperCase();
+
+            document.getElementById('sunrise').textContent = f[0].astro.sunrise;
+            document.getElementById('sunset').textContent = f[0].astro.sunset;
+            document.getElementById('uv-index').textContent = c.uv;
+            document.getElementById('clouds').textContent = c.cloud + '%';
+            document.getElementById('wind-dir').textContent = c.wind_dir;
+
+            const container = document.getElementById('forecast-container');
+            container.innerHTML = '';
+            f.forEach((day, i) => {
+                const date = new Date(day.date);
+                const dayName = i === 0 ? 'BUGÜN' : date.toLocaleDateString('tr-TR', { weekday: 'short' }).toUpperCase();
+                container.innerHTML += `
+                    <div class="forecast-item">
+                        <div style="font-weight: bold; margin-bottom: 10px;">${dayName}</div>
+                        <div style="font-size: 40px; margin: 10px 0;">${getWeatherEmoji(day.day.condition.text)}</div>
+                        <div style="font-size: 20px; margin: 10px 0;">${Math.round(day.day.avgtemp_c)}°C</div>
+                        <div style="font-size: 12px; opacity: 0.8;">${day.day.condition.text}</div>
+                    </div>
+                `;
+            });
+        }
+
+        function getWeatherEmoji(condition) {
+            const c = condition.toLowerCase();
+            if (c.includes('rain') || c.includes('yağmur')) return '🌧️';
+            if (c.includes('snow') || c.includes('kar')) return '❄️';
+            if (c.includes('thunder') || c.includes('fırtına')) return '⛈️';
+            if (c.includes('cloud') || c.includes('bulut') || c.includes('kapalı')) return '☁️';
+            if (c.includes('clear') || c.includes('sunny') || c.includes('açık') || c.includes('güneşli')) return '☀️';
+            return '🌤️';
+        }
+
+        function searchCity() {
+            const city = document.getElementById('city-search').value.trim();
+            if (city) {
+                currentCity = city;
+                fetchWeather(city);
+                switchToTab(0);
+            }
+        }
+
+        function loadCity(city) {
+            currentCity = city;
+            fetchWeather(city);
+            switchToTab(0);
+        }
+
+        function switchToTab(index) {
+            playTabSwitchSound();
+            triggerScreenTransition();
+            const items = document.querySelectorAll('.menu-item');
+            const sections = document.querySelectorAll('.content-section');
+            items.forEach(m => m.classList.remove('active'));
+            items[index].classList.add('active');
+            sections.forEach(s => s.classList.remove('active'));
+            sections[index].classList.add('active');
+            currentSection = sections[index].id;
+        }
+
+        function getCurrentLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    pos => fetchWeather(`${pos.coords.latitude},${pos.coords.longitude}`),
+                    () => alert('Konum alınamadı!')
+                );
+            }
+        }
+
+        function refreshWeather() {
+            fetchWeather(currentCity);
+        }
+
+        document.getElementById('city-search').addEventListener('keypress', e => {
+            if (e.key === 'Enter') searchCity();
+        });
+
+        console.log('%c> PIP-BOY HAVA DURUMU - BAŞLATILIYOR...', 'color: #0f0; font-family: monospace; font-size: 16px;');
+        console.log('%c> Vault-Tec Weather System - ONLINE', 'color: #0f0; font-family: monospace;');
+    </script>
+</body>
+</html>
